@@ -1,0 +1,31 @@
+// Input Schema for the {{.ToolNameOriginal}} tool
+const {{.InputSchemaConst}} = `{{.RawInputSchema}}`
+
+// Response Template for the {{.ToolNameOriginal}} tool
+const {{.ResponseTemplateConst}} = `{{.ResponseTemplate}}`
+
+{{if .URL}}// URL: {{.URL}}{{end}}
+{{if .Method}}// Method: {{.Method}}{{end}}
+{{if .Headers}}// Headers:{{range .Headers}}
+//   {{.Key}}: {{.Value}}{{end}}{{end}}
+
+
+// New{{.ToolNameOriginal}}MCPTool creates the MCP Tool instance for {{.ToolNameOriginal}}
+func New{{.ToolNameOriginal}}MCPTool() mcp.Tool {
+	return mcp.NewToolWithRawSchema(
+		"{{.ToolNameOriginal}}",
+		"{{.ToolDescription}}",
+		[]byte({{.InputSchemaConst}}), 
+	)
+}
+
+
+// {{.ToolHandlerName}} is the handler function for the {{.ToolNameOriginal}} tool.
+// This function is automatically generated. Users should implement the actual
+// logic within this function body to integrate with backend APIs.
+// You can generate types, http client and helpers for parsing request params to facilitate the implementation.
+func {{.ToolHandlerName}} (ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	
+
+	return nil, fmt.Errorf("%s not implemented", "{{.ToolNameOriginal}}")
+}
