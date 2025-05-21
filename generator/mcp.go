@@ -3,6 +3,8 @@ package generator
 import (
 	"embed"
 	"fmt"
+
+	"github.com/lyeslabs/mcpgen/converter"
 )
 
 //go:embed templates/*.templ
@@ -15,7 +17,7 @@ type ToolTemplateData struct {
 	ToolHandlerName       string
 	ToolDescription       string
 	RawInputSchema        string
-	ResponseTemplate      string
+	ResponseTemplate      []converter.ResponseTemplate
 	InputSchemaConst      string
 	ResponseTemplateConst string
 }

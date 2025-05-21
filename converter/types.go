@@ -24,12 +24,12 @@ type SecurityScheme struct {
 
 // Tool represents an MCP tool configuration
 type Tool struct {
-	Name             string
-	Description      string
-	Args             []Arg
-	RequestTemplate  RequestTemplate
-	ResponseTemplate ResponseTemplate
-	RawInputSchema   string
+	Name            string
+	Description     string
+	Args            []Arg
+	RequestTemplate RequestTemplate
+	Responses       []ResponseTemplate
+	RawInputSchema  string
 }
 
 // RequestTemplate represents the MCP request template
@@ -46,7 +46,7 @@ type RequestTemplate struct {
 
 // ToolSecurityRequirement specifies a security scheme requirement for a tool.
 type ToolSecurityRequirement struct {
-	ID string // References a SecurityScheme ID defined in ServerConfig.SecuritySchemes
+	ID string
 }
 
 // Header represents an HTTP header
@@ -57,9 +57,10 @@ type Header struct {
 
 // ResponseTemplate represents the MCP response template
 type ResponseTemplate struct {
-	Body        string
 	PrependBody string
-	AppendBody  string
+	StatusCode  int
+	ContentType string
+	Suffix       string 
 }
 
 // ConvertOptions represents options for the conversion process
@@ -81,47 +82,35 @@ type MCPConfigTemplate struct {
 
 // Arg represents an argument in an API, which can come from path, query, or body
 type Arg struct {
-	// Core identification
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-
-	// Source information
-	Source     string `json:"source"` // "path", "query", "header", "body"
-	Required   bool   `json:"required"`
-	Deprecated bool   `json:"deprecated,omitempty"`
-
-	// Schema definition - the actual data structure
-	Schema *Schema `json:"schema"`
-
+	Name        string  `json:"name"`
+	Description string  `json:"description,omitempty"`
+	Source      string  `json:"source"` // "path", "query", "header", "body"
+	Required    bool    `json:"required"`
+	Deprecated  bool    `json:"deprecated,omitempty"`
+	Schema      *Schema `json:"schema"`
 	// For request bodies with multiple content types
 	ContentTypes map[string]*Schema `json:"contentTypes,omitempty"`
 }
 
 // Schema represents the structure and validation rules for data
 type Schema struct {
-	// Core schema metadata
-	Types []string `json:"types"` // Multiple types supported e.g. ["string", "null"]
-	// Schema composition keywords (added to support oneOf, anyOf, allOf, not)
-	OneOf       []*Schema     `json:"oneOf,omitempty"`
-	AnyOf       []*Schema     `json:"anyOf,omitempty"`
-	AllOf       []*Schema     `json:"allOf,omitempty"`
-	Not         *Schema       `json:"not,omitempty"` // 'not' has a single schema, not an array
-	Title       string        `json:"title,omitempty"`
-	Description string        `json:"description,omitempty"`
-	Format      string        `json:"format,omitempty"`
-	Default     interface{}   `json:"default,omitempty"`
-	Example     interface{}   `json:"example,omitempty"`
-	Enum        []interface{} `json:"enum,omitempty"`
-
-	// Boolean flags
-	ReadOnly  bool `json:"readOnly,omitempty"`
-	WriteOnly bool `json:"writeOnly,omitempty"`
-
-	// Type-specific validations - only relevant fields will be populated based on type
-	String *StringValidation `json:"string,omitempty"`
-	Number *NumberValidation `json:"number,omitempty"`
-	Array  *ArrayValidation  `json:"array,omitempty"`
-	Object *ObjectValidation `json:"object,omitempty"`
+	Types       []string          `json:"types"`
+	OneOf       []*Schema         `json:"oneOf,omitempty"`
+	AnyOf       []*Schema         `json:"anyOf,omitempty"`
+	AllOf       []*Schema         `json:"allOf,omitempty"`
+	Not         *Schema           `json:"not,omitempty"`
+	Title       string            `json:"title,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Format      string            `json:"format,omitempty"`
+	Default     interface{}       `json:"default,omitempty"`
+	Example     interface{}       `json:"example,omitempty"`
+	Enum        []interface{}     `json:"enum,omitempty"`
+	ReadOnly    bool              `json:"readOnly,omitempty"`
+	WriteOnly   bool              `json:"writeOnly,omitempty"`
+	String      *StringValidation `json:"string,omitempty"`
+	Number      *NumberValidation `json:"number,omitempty"`
+	Array       *ArrayValidation  `json:"array,omitempty"`
+	Object      *ObjectValidation `json:"object,omitempty"`
 }
 
 // StringValidation contains validation rules specific to string types

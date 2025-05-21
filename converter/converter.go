@@ -11,6 +11,8 @@ type Converter struct {
 	options ConvertOptions
 }
 
+
+
 // NewConverter creates a new OpenAPI to MCP converter
 func NewConverter(parser *Parser) *Converter {
 	return &Converter{
@@ -20,6 +22,7 @@ func NewConverter(parser *Parser) *Converter {
 		},
 	}
 }
+
 
 // Convert converts an OpenAPI document to an MCP configuration
 func (c *Converter) Convert() (*MCPConfig, error) {

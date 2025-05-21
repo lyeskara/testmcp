@@ -21,19 +21,28 @@ func (g *Generator) GenerateServerFile(config *converter.MCPConfig) error {
 		return fmt.Errorf("failed to parse server template: %w", err)
 	}
 
+	importPath, err := BuildImportPath(g.outputDir)
+	if err != nil {
+		return fmt.Errorf("failed to build import path: %w", err)
+	}
+
 	data := struct {
-		PackageName string
-		Tools       []ToolTemplateData
+		PackageName        string
+		MCPToolsImportPath string
+		Tools              []ToolTemplateData
 	}{
-		PackageName: g.PackageName,
-		Tools:       make([]ToolTemplateData, 0, len(config.Tools)),
+		PackageName:        g.PackageName,
+		Tools:              make([]ToolTemplateData, 0, len(config.Tools)),
+		MCPToolsImportPath: importPath,
 	}
 
 	for _, tool := range config.Tools {
+		capitalizedName := capitalizeFirstLetter(tool.Name)
+
 		data.Tools = append(data.Tools, ToolTemplateData{
-			ToolNameOriginal: tool.Name,
-			ToolNameGo:       tool.Name,
-			ToolHandlerName:  tool.Name + "Handler",
+			ToolNameOriginal: capitalizedName,
+			ToolNameGo:       capitalizedName,
+			ToolHandlerName:  capitalizedName + "Handler",
 			ToolDescription:  tool.Description,
 		})
 	}

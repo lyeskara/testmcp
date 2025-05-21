@@ -19,7 +19,7 @@ func NewGenerator(specPath string, validation bool, packageName string, outputDi
 	parser := converter.NewParser(validation)
 	err := parser.ParseFile(specPath)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing OpenAPI specification: %v", err)
+		return nil, fmt.Errorf("error parsing OpenAPI specification: %w", err)
 	}
 
 	return &Generator{

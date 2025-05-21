@@ -23,26 +23,28 @@ func (g *Generator) GenerateHTTPClient(includes []string) error {
 		return fmt.Errorf("no valid includes specified (must include 'types', 'httpclient', or both)")
 	}
 
-	// Prepare codegen configuration
+	if g.spec == nil {
+		return fmt.Errorf("code generation failed: OpenAPI spec is nil") 
+	}
+
 	cfg := codegen.Configuration{
-		PackageName: g.PackageName,
+		PackageName: "apiclient",
 		Generate: codegen.GenerateOptions{
 			Models: generateTypes,
 			Client: generateClient,
 		},
 	}
-
-	// Generate the code
+	
 	code, err := codegen.Generate(g.spec, cfg)
 	if err != nil {
-		return fmt.Errorf("code generation failed: %v", err)
+		return fmt.Errorf("code generation failed: %w", err)
 	}
 
 	// Write to file
-	if err := writeFileContent(g.outputDir, "HttpClient.go", func() ([]byte, error) {
+	if err := writeFileContent(g.outputDir + "/apiclient", "HTTPClient.go", func() ([]byte, error) {
 		return []byte(code), nil
 	}); err != nil {
-		return fmt.Errorf("failed to write generated code to file: %v", err)
+		return fmt.Errorf("failed to write generated code to file: %w", err)
 	}
 
 	return nil

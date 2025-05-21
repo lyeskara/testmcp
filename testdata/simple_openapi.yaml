@@ -1,0 +1,11 @@
+openapi: 3.0.0
+info:
+  title: My Valid API From File
+  version: "1.0.0"
+paths:
+  /example:
+    get:
+      summary: An example endpoint
+      responses:
+        "200":
+          description: A successful response

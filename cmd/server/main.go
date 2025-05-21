@@ -1,7 +1,9 @@
 package main
 
 import (
-	mcpgen "github.com/lyeslabs/mcpgen/mcp"
+	"log"
+
+	"github.com/lyeslabs/mcpgen/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -10,5 +12,5 @@ var mcpServer = mcpgen.NewMCPServer()
 
 func main() {
 	sseHandler := server.NewSSEServer(mcpServer)
-	sseHandler.Start(":8080")
+	log.Fatal(sseHandler.Start(":8000"))
 }

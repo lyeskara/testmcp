@@ -56,7 +56,7 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert parameters: %w", err)
 	}
-	if args != nil {
+	if len(args) > 0 {
 		tool.Args = append(tool.Args, args...)
 	}
 
@@ -89,11 +89,11 @@ func (c *Converter) convertOperation(path, method string, operation *openapi3.Op
 	tool.RequestTemplate = *requestTemplate
 
 	// Create response template
-	responseTemplate, err := c.createResponseTemplate(operation)
+	responseTemplate, err := c.createResponseTemplates(operation)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create response template: %w", err)
 	}
-	tool.ResponseTemplate = *responseTemplate
+	tool.Responses = responseTemplate
 
 	return tool, nil
 }

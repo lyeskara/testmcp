@@ -35,7 +35,9 @@ func (g *Generator) GenerateHelpers() error {
 		return fmt.Errorf("failed to format generated helpers code: %w", err)
 	}
 
-	err = writeFileContent(g.outputDir, "Paramhelpers.go", func() ([]byte, error) {
+	ensureOutputDir(g.outputDir + "/helpers")
+
+	err = writeFileContent(g.outputDir + "/helpers", "Paramhelpers.go", func() ([]byte, error) {
 		return formattedCode, nil
 	})
 	if err != nil {

@@ -1,4 +1,4 @@
-package mcpgen
+package mcputils
 
 import (
 	"encoding/json"

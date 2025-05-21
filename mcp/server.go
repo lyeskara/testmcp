@@ -1,6 +1,7 @@
 package mcpgen
 
 import (
+	"github.com/lyeslabs/mcpgen/mcp/mcptools"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -10,14 +11,16 @@ func NewMCPServer() *server.MCPServer {
 	s := server.NewMCPServer(
 		"MCP Server",
 		"1.0.0",
+		server.WithToolCapabilities(true),
+		server.WithLogging(),
 	)
 
 	// Register all tools
-	s.AddTool(NewCreateTodoMCPTool(), CreateTodoHandler)
-	s.AddTool(NewDeleteTodoByIdMCPTool(), DeleteTodoByIdHandler)
-	s.AddTool(NewGetTodoByIdMCPTool(), GetTodoByIdHandler)
-	s.AddTool(NewListTodosMCPTool(), ListTodosHandler)
-	s.AddTool(NewUpdateTodoByIdMCPTool(), UpdateTodoByIdHandler)
+	s.AddTool(mcptools.NewCreateTodoMCPTool(), mcptools.CreateTodoHandler)
+	s.AddTool(mcptools.NewDeleteTodoByIdMCPTool(), mcptools.DeleteTodoByIdHandler)
+	s.AddTool(mcptools.NewGetTodoByIdMCPTool(), mcptools.GetTodoByIdHandler)
+	s.AddTool(mcptools.NewListTodosMCPTool(), mcptools.ListTodosHandler)
+	s.AddTool(mcptools.NewUpdateTodoByIdMCPTool(), mcptools.UpdateTodoByIdHandler)
 
 	return s
 }

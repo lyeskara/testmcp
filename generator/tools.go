@@ -3,12 +3,13 @@ package generator
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
 	"go/format"
-	"log"
+	"go/parser"
+	"go/printer"
+	"go/token"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -28,6 +29,7 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 	}
 
 	for _, tool := range config.Tools {
+		capitalizedName := capitalizeFirstLetter(tool.Name)
 		data := struct {
 			ToolTemplateData
 			URL     string
@@ -35,12 +37,12 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 			Headers []converter.Header
 		}{
 			ToolTemplateData: ToolTemplateData{
-				ToolNameOriginal:      tool.Name,
-				ToolNameGo:            tool.Name,
-				ToolHandlerName:       tool.Name + "Handler",
+				ToolNameOriginal:      capitalizedName,
+				ToolNameGo:            capitalizedName,
+				ToolHandlerName:       capitalizedName + "Handler",
 				ToolDescription:       tool.Description,
 				RawInputSchema:        tool.RawInputSchema,
-				ResponseTemplate:      tool.ResponseTemplate.PrependBody,
+				ResponseTemplate:      tool.Responses,
 				InputSchemaConst:      fmt.Sprintf("%sInputSchema", tool.Name),
 				ResponseTemplateConst: fmt.Sprintf("%sResponseTemplate", tool.Name),
 			},
@@ -49,8 +51,8 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 			Headers: tool.RequestTemplate.Headers,
 		}
 
-		outputFileName := tool.Name + ".go"
-		outputFilePath := filepath.Join(g.outputDir, outputFileName)
+		outputFileName := capitalizedName + ".go"
+		outputFilePath := filepath.Join(g.outputDir+"/mcptools", outputFileName)
 
 		// Check if file already exists and extract handler implementation if it does
 		existingImplementation := ""
@@ -68,7 +70,7 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 		var toolBuf bytes.Buffer
 
 		// Write package declaration
-		fmt.Fprintf(&toolBuf, "package %s\n\n", g.PackageName)
+		fmt.Fprintf(&toolBuf, "package mcptools\n\n")
 
 		// Merge imports
 		requiredImports := []string{
@@ -77,11 +79,15 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 			"github.com/mark3labs/mcp-go/mcp",
 		}
 
-		mergedImports := mergeImports(requiredImports, existingImports)
-
-		if len(mergedImports) > 0 {
+		if len(existingImports) > 0 {
 			fmt.Fprintf(&toolBuf, "import (\n")
-			for _, imp := range mergedImports {
+			for _, imp := range existingImports {
+				fmt.Fprintf(&toolBuf, "\t%s\n", imp)
+			}
+			fmt.Fprintf(&toolBuf, ")\n\n")
+		} else {
+			fmt.Fprintf(&toolBuf, "import (\n")
+			for _, imp := range requiredImports {
 				fmt.Fprintf(&toolBuf, "\t\"%s\"\n", imp)
 			}
 			fmt.Fprintf(&toolBuf, ")\n\n")
@@ -106,11 +112,11 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 			return fmt.Errorf("failed to format generated code for %s: %w", outputFileName, err)
 		}
 
-		if err := os.MkdirAll(g.outputDir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
-		}
+		err = writeFileContent(g.outputDir+"/mcptools", outputFileName, func() ([]byte, error) {
+			return formattedCode, nil
+		})
 
-		if err := os.WriteFile(outputFilePath, formattedCode, 0644); err != nil {
+		if err != nil {
 			return fmt.Errorf("failed to write %s: %w", outputFileName, err)
 		}
 	}
@@ -118,171 +124,110 @@ func (g *Generator) GenerateToolFiles(config *converter.MCPConfig) error {
 	return nil
 }
 
-// Import handling functions
+func capitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
 func extractImports(fileContent string) []string {
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", fileContent, parser.ImportsOnly)
+	if err != nil {
+		return nil
+	}
 	var imports []string
-
-	// Find the import block
-	importStart := strings.Index(fileContent, "import (")
-	if importStart == -1 {
-		// Try single-line imports
-		re := regexp.MustCompile(`import\s+"([^"]+)"`)
-		matches := re.FindAllStringSubmatch(fileContent, -1)
-		for _, match := range matches {
-			if len(match) > 1 {
-				imports = append(imports, match[1])
-			}
+	for _, imp := range f.Imports {
+		importLine := ""
+		if imp.Name != nil {
+			importLine += imp.Name.Name + " "
 		}
-		return imports
+		importLine += imp.Path.Value // includes quotes
+		imports = append(imports, importLine)
 	}
-
-	// Find the closing parenthesis
-	importEnd := strings.Index(fileContent[importStart:], ")")
-	if importEnd == -1 {
-		return imports
-	}
-
-	importBlock := fileContent[importStart+8 : importStart+importEnd]
-
-	// Extract each import
-	re := regexp.MustCompile(`"([^"]+)"`)
-	matches := re.FindAllStringSubmatch(importBlock, -1)
-
-	for _, match := range matches {
-		if len(match) > 1 {
-			imports = append(imports, match[1])
-		}
-	}
-
 	return imports
 }
 
-func mergeImports(required, existing []string) []string {
-	uniqueImports := make(map[string]bool)
-
-	// Add all required imports
-	for _, imp := range required {
-		uniqueImports[imp] = true
-	}
-
-	// Add existing imports that aren't already included
-	for _, imp := range existing {
-		uniqueImports[imp] = true
-	}
-
-	// Convert back to slice
-	var result []string
-	for imp := range uniqueImports {
-		result = append(result, imp)
-	}
-
-	// Sort for consistent output
-	sort.Strings(result)
-
-	return result
-}
-
+// Extracts the full function body (as string) for a handler with the given name and signature.
 func extractHandlerImplementation(fileContent, handlerName string) string {
-	// Use regex to allow for flexible spacing
-	pattern := fmt.Sprintf(`func\s+%s\s*\(\s*ctx\s+context\.Context\s*,\s*request\s+mcp\.CallToolRequest\s*\)\s*\(\s*\*mcp\.CallToolResult\s*,\s*error\s*\)\s*{`,
-		regexp.QuoteMeta(handlerName))
-
-	re := regexp.MustCompile(pattern)
-	loc := re.FindStringIndex(fileContent)
-
-	if loc == nil {
-		log.Printf("Could not find handler function signature for %s", handlerName)
-		return "" // Function not found
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", fileContent, parser.ParseComments)
+	if err != nil {
+		return ""
 	}
 
-	// Find the opening brace position (end of the regex match)
-	startIdx := loc[1]
+	for _, decl := range f.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != handlerName {
+			continue
+		}
+		// Check signature: (ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
+		if len(fn.Type.Params.List) != 2 || len(fn.Type.Results.List) != 2 {
+			continue
+		}
+		param2 := fn.Type.Params.List[1]
+		result1 := fn.Type.Results.List[0]
 
-	// Track braces to find the matching closing brace
-	braceCount := 1
-	endIdx := startIdx
-
-	for endIdx < len(fileContent) && braceCount > 0 {
-		endIdx++
-		if endIdx >= len(fileContent) {
-			break
+		if exprToString(param2.Type) != "mcp.CallToolRequest" {
+			continue
+		}
+		if exprToString(result1.Type) != "*mcp.CallToolResult" {
+			continue
 		}
 
-		if fileContent[endIdx] == '{' {
-			braceCount++
-		} else if fileContent[endIdx] == '}' {
-			braceCount--
+		// Print the function body as Go code
+		if fn.Body != nil {
+			// Get the body as a substring, including braces
+			start := fset.Position(fn.Body.Lbrace).Offset
+			end := fset.Position(fn.Body.Rbrace).Offset
+			if start < end && end < len(fileContent) {
+				body := fileContent[start : end+1]
+				// Ensure trailing newline for clean formatting
+				if !strings.HasSuffix(body, "\n") {
+					body += "\n"
+				}
+				return body
+			}
 		}
 	}
-
-	if endIdx >= len(fileContent) {
-		log.Printf("Could not find matching closing brace for %s", handlerName)
-		return "" // Couldn't find matching brace
-	}
-
-	// Extract everything between the opening and closing braces
-	implementation := fileContent[startIdx:endIdx]
-
-	return implementation
+	return ""
 }
 
 func replaceHandlerImplementation(fileContent, handlerName, implementation string) string {
-	// Use a regex pattern to find the handler function
-	pattern := fmt.Sprintf(`func\s+%s\s*\(\s*ctx\s+context\.Context\s*,\s*request\s+mcp\.CallToolRequest\s*\)\s*\(\s*\*mcp\.CallToolResult\s*,\s*error\s*\)\s*{`,
-		regexp.QuoteMeta(handlerName))
-
-	re := regexp.MustCompile(pattern)
-	loc := re.FindStringIndex(fileContent)
-
-	if loc == nil {
-		log.Printf("Could not find handler function signature for: %s", handlerName)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, "", fileContent, parser.ParseComments)
+	if err != nil {
 		return fileContent
 	}
 
-	// Get the position after the opening brace
-	startIdx := loc[1]
-
-	// Track braces to find the matching closing brace
-	braceCount := 1
-	endIdx := startIdx
-
-	for endIdx < len(fileContent) && braceCount > 0 {
-		endIdx++
-		if endIdx >= len(fileContent) {
-			break
+	for _, decl := range f.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != handlerName {
+			continue
 		}
-
-		if fileContent[endIdx] == '{' {
-			braceCount++
-		} else if fileContent[endIdx] == '}' {
-			braceCount--
+		if fn.Body == nil {
+			continue
+		}
+		start := fset.Position(fn.Body.Lbrace).Offset
+		end := fset.Position(fn.Body.Rbrace).Offset
+		if start < end && end < len(fileContent) {
+			var buf bytes.Buffer
+			buf.WriteString(fileContent[:start])
+			impl := implementation
+			if !strings.HasSuffix(impl, "\n") {
+				impl += "\n"
+			}
+			buf.WriteString(impl)
+			buf.WriteString(fileContent[end+1:])
+			return buf.String()
 		}
 	}
+	return fileContent
+}
 
-	if endIdx >= len(fileContent) {
-		log.Printf("Could not find matching closing brace for: %s", handlerName)
-		return fileContent
-	}
-
-	// Create the new function body
-	// Keep the original function declaration and closing brace
-	newContent := fileContent[:startIdx] +
-		"\n\t" + strings.TrimSpace(implementation) +
-		"\n}" // Make sure we add the closing brace
-
-	// Add everything after the original function
-	if endIdx+1 < len(fileContent) {
-		newContent += fileContent[endIdx+1:]
-	}
-
-	// Check if the last closing brace is already in the implementation
-	if strings.HasSuffix(strings.TrimSpace(implementation), "}") {
-		// If we have a closing brace in both the implementation and what we added,
-		// we need to remove one of them
-		newContent = fileContent[:startIdx] +
-			"\n\t" + strings.TrimSpace(implementation) +
-			fileContent[endIdx+1:]
-	}
-
-	return newContent
+func exprToString(expr ast.Expr) string {
+	var buf bytes.Buffer
+	printer.Fprint(&buf, token.NewFileSet(), expr)
+	return buf.String()
 }

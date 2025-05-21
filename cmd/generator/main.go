@@ -13,7 +13,7 @@ func main() {
 
 	// Define command-line flags
 	inputFile := flag.String("input", "", "Path to the OpenAPI specification file (JSON or YAML)")
-	outputDirPointer := flag.String("output", "", "Path to the output MCP configuration file (YAML)")
+	outputDir := flag.String("output", "", "Path to the output MCP configuration file (YAML)")
 
 	validation := flag.Bool("validation", false, "Enable OpenAPI validation")
 	packageName := flag.String("package", "mcpgen", "Generated package name")
@@ -29,13 +29,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *outputDirPointer == "" {
+	if *outputDir == "" {
 		fmt.Println("Error: output file is required")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	generator, err := generator.NewGenerator(*inputFile, *validation, *packageName, *outputDirPointer)
+	// Create the output directory if it doesn't exist
+	if *outputDir != "" && *outputDir != "." {
+		err := os.MkdirAll(*outputDir, 0755)
+		if err != nil {
+			fmt.Printf("Error creating output directory '%s': %v\n", *outputDir, err)
+			os.Exit(1)
+		}
+	}
+
+	generator, err := generator.NewGenerator(*inputFile, *validation, *packageName, *outputDir)
 	if err != nil {
 		fmt.Printf("Error creating generator: %v\n", err)
 		os.Exit(1)
@@ -57,15 +66,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create the output directory if it doesn't exist
-	outputDir := *outputDirPointer
-	if outputDir != "" && outputDir != "." {
-		err := os.MkdirAll(outputDir, 0755)
-		if err != nil {
-			fmt.Printf("Error creating output directory '%s': %v\n", outputDir, err)
-			os.Exit(1)
-		}
-	}
-
-	fmt.Printf("Successfully converted OpenAPI specification to MCP configuration: %s\n", outputDir)
+	fmt.Printf("Successfully converted OpenAPI specification to MCP configuration: %s\n", *outputDir)
 }

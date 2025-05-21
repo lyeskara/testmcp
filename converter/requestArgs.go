@@ -107,7 +107,7 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 	if schema.Type != nil {
 		result.Types = *schema.Type
 	} else {
-		result.Types = []string{} // Empty type array
+		result.Types = []string{}
 	}
 
 	if schema.Nullable {
@@ -128,7 +128,6 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 		}
 	}
 
-	// Apply type-specific validations
 	var err error
 
 	if hasStringType(schema) {
@@ -168,7 +167,6 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 				result.OneOf[i] = subSchema
 			} else {
 				// Handle case where recursive call returned nil schema but no error?
-				// This might indicate an issue in the source or applySchema logic.
 				// For now, return error as a nil schema here is likely unexpected.
 				return nil, fmt.Errorf("oneOf sub-schema at index %d resulted in a nil schema", i)
 			}
@@ -182,7 +180,7 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 			if subSchemaRef == nil || subSchemaRef.Value == nil {
 				return nil, fmt.Errorf("anyOf contains a nil schema reference or value at index %d", i)
 			}
-			subSchema, err := c.applySchema(subSchemaRef.Value) // Recursive call
+			subSchema, err := c.applySchema(subSchemaRef.Value) 
 			if err != nil {
 				return nil, fmt.Errorf("error processing anyOf sub-schema at index %d: %w", i, err)
 			}
@@ -201,7 +199,7 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 			if subSchemaRef == nil || subSchemaRef.Value == nil {
 				return nil, fmt.Errorf("allOf contains a nil schema reference or value at index %d", i)
 			}
-			subSchema, err := c.applySchema(subSchemaRef.Value) // Recursive call
+			subSchema, err := c.applySchema(subSchemaRef.Value) 
 			if err != nil {
 				return nil, fmt.Errorf("error processing allOf sub-schema at index %d: %w", i, err)
 			}
@@ -215,7 +213,7 @@ func (c *Converter) applySchema(schema *openapi3.Schema) (*Schema, error) {
 
 	// Handle Not
 	if schema.Not != nil && schema.Not.Value != nil {
-		notSchema, err := c.applySchema(schema.Not.Value) // Recursive call
+		notSchema, err := c.applySchema(schema.Not.Value) 
 		if err != nil {
 			return nil, fmt.Errorf("error processing not sub-schema: %w", err)
 		}
@@ -250,15 +248,15 @@ func (c *Converter) createNumberValidation(schema *openapi3.Schema) *NumberValid
 		Minimum:          schema.Min,
 		Maximum:          schema.Max,
 		MultipleOf:       schema.MultipleOf,
-		ExclusiveMinimum: schema.ExclusiveMin, // Maps getkin bool to our bool
-		ExclusiveMaximum: schema.ExclusiveMax, // Maps getkin bool to our bool
+		ExclusiveMinimum: schema.ExclusiveMin, 
+		ExclusiveMaximum: schema.ExclusiveMax, 
 	}
 }
 
 // createArrayValidation creates array-specific validations
 func (c *Converter) createArrayValidation(schema *openapi3.Schema) (*ArrayValidation, error) {
 	if schema == nil {
-		return nil, nil // Return nil validation, no error
+		return nil, nil 
 	}
 	result := &ArrayValidation{
 		MinItems:    schema.MinItems,
@@ -279,7 +277,6 @@ func (c *Converter) createArrayValidation(schema *openapi3.Schema) (*ArrayValida
 
 // createObjectValidation creates object-specific validations
 func (c *Converter) createObjectValidation(schema *openapi3.Schema) (*ObjectValidation, error) {
-	// This check prevents panic if createObjectValidation is called with a nil schema
 	if schema == nil {
 		return nil, nil
 	}
@@ -293,30 +290,21 @@ func (c *Converter) createObjectValidation(schema *openapi3.Schema) (*ObjectVali
 	if len(schema.Properties) > 0 {
 		result.Properties = make(map[string]*Schema)
 		for propName, propSchemaRef := range schema.Properties {
-			// Check the SchemaRef pointer itself first
 			if propSchemaRef != nil {
-				// --- START OF CODE CHANGE SNIPPET ---
-				// Now, check the *openapi3.Schema pointer within the SchemaRef's Value field
-				if propSchemaRef.Value != nil { // <-- ADDED THIS CHECK
-					propSchema, err := c.applySchema(propSchemaRef.Value) // Pass the non-nil Value
+				if propSchemaRef.Value != nil {
+					propSchema, err := c.applySchema(propSchemaRef.Value) 
 					if err != nil {
 						return nil, fmt.Errorf("error processing property '%s': %w", propName, err)
 					}
-					if propSchema != nil { // Only add if conversion was successful
+					if propSchema != nil { 
 						result.Properties[propName] = propSchema
 					}
 				} else {
-					// propSchemaRef was non-nil, but its Value was nil.
-					// This can represent a property defined with `{}` in the OpenAPI spec.
-					// Map this to an empty schema in our struct.
-					result.Properties[propName] = &Schema{} // Map {}
-					// Optional: Log a warning if this case is unexpected
-					// fmt.Printf("Warning: Property '%s' has a non-nil SchemaRef but nil Value. Mapping to empty schema.\n", propName)
+					result.Properties[propName] = &Schema{} 
+					fmt.Printf("Warning: Property '%s' has a non-nil SchemaRef but nil Value. Mapping to empty schema.\n", propName)
 				}
-				// --- END OF CODE CHANGE SNIPPET ---
 			} else {
-				// Optional: Log a warning for a nil property schema reference if this shouldn't happen
-				// fmt.Printf("Warning: Property '%s' has a nil schema reference in the OpenAPI spec.\n", propName)
+				fmt.Printf("Warning: Property '%s' has a nil schema reference in the OpenAPI spec.\n", propName)
 			}
 		}
 		if len(result.Properties) == 0 {
@@ -325,22 +313,17 @@ func (c *Converter) createObjectValidation(schema *openapi3.Schema) (*ObjectVali
 	}
 
 	// --- Handle additionalProperties ---
-	// schema.AdditionalProperties is a VALUE type, so it's never nil.
-	// Check its pointer fields (.Has and .Schema) for nil.
-
 	if schema.AdditionalProperties.Has != nil {
 		// Case 1: additionalProperties is explicitly true or false
-		if !*schema.AdditionalProperties.Has { // Safely dereference Has pointer
+		if !*schema.AdditionalProperties.Has { 
 			result.DisallowAdditionalProperties = true
-		} else { // *schema.AdditionalProperties.Has is true
+		} else { 
 			result.AdditionalProperties = &Schema{} // Represents allowing any additional properties ({})
 		}
 	} else if schema.AdditionalProperties.Schema != nil {
 		// Case 2: additionalProperties is a schema object (or meant to be)
-		// --- START OF CODE CHANGE SNIPPET ---
-		// Check if the resolved Schema pointer within the SchemaRef is non-nil
-		if schema.AdditionalProperties.Schema.Value != nil { // <-- ADDED THIS CHECK
-			addPropSchema, err := c.applySchema(schema.AdditionalProperties.Schema.Value) // Pass non-nil Value
+		if schema.AdditionalProperties.Schema.Value != nil { 
+			addPropSchema, err := c.applySchema(schema.AdditionalProperties.Schema.Value) 
 			if err != nil {
 				return nil, fmt.Errorf("error processing additionalProperties schema: %w", err)
 			}
@@ -351,16 +334,10 @@ func (c *Converter) createObjectValidation(schema *openapi3.Schema) (*ObjectVali
 				result.AdditionalProperties = &Schema{}
 			}
 		} else {
-			// schema.AdditionalProperties.Schema is non-nil, but its Value is nil.
-			// This corresponds to additionalProperties: {}. Map to {}.
 			result.AdditionalProperties = &Schema{}
-			// Optional: Log a warning if this case is unexpected
-			// fmt.Printf("Warning: AdditionalProperties SchemaRef has a nil Value. Mapping to empty schema {}.\n")
+			fmt.Printf("Warning: AdditionalProperties SchemaRef has a nil Value. Mapping to empty schema {}.\n")
 		}
-		// --- END OF CODE CHANGE SNIPPET ---
 	}
-	// If both .Has and .Schema pointers are nil, additionalProperties was omitted (default true).
-	// Our struct defaults (nil AdditionalProperties, false DisallowAdditionalProperties) handle this.
 
 	return result, nil
 }

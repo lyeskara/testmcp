@@ -41,14 +41,21 @@ paths:
           schema:
             type: string
             enum: [pending, completed, in-progress]
-            
+        - name: token
+          in: cookie
+          description: Token for authentication
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 20
         - name: limit
           in: query
           description: Maximum number of todos to return
           required: false
           schema:
-            type: 
-              - integer
+            type: integer
             format: int32
             minimum: 1
             default: 20
@@ -72,7 +79,6 @@ paths:
                   oneOf:
                     - $ref: '#/components/schemas/Todo'
                     - $ref: '#/components/schemas/NewTodo'
-                  
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -88,28 +94,127 @@ paths:
         required: true
         content:
           application/json:
-             schema:
-              $ref: '#/components/schemas/TodosList'
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                priority:
+                  type: string
+                  enum: [low, medium, high]
       responses:
         '201':
           description: Todo item created successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Todo'
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  completed:
+                    type: boolean
+            application/xml:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  title:
+                    type: string
+                  completed:
+                    type: boolean
+            text/plain:
+              schema:
+                type: string
+                example: "Created"
           headers:
             Location:
               description: URL of the newly created todo item.
               schema:
                 type: string
-                format: url
+                format: uri
+            X-RateLimit-Remaining:
+              description: The number of requests left for the time window.
+              schema:
+                type: integer
+                minimum: 0
+        '207':
+          description: Multi-status response for batch creation.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                    - type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                    - type: object
+                      properties:
+                        error:
+                          type: string
         '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Bad request due to invalid input.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                  - type: object
+                    properties:
+                      details:
+                        type: array
+                        items:
+                          type: string
+          headers:
+            X-Error-Code:
+              description: Application-specific error code.
+              schema:
+                type: string
         '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+          description: Unprocessable entity due to validation errors.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      anyOf:
+                        - type: object
+                          properties:
+                            field:
+                              type: string
+                            error:
+                              type: string
+                        - type: string
         '500':
-          $ref: '#/components/responses/InternalServerError'
-
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  traceId:
+                    type: string
+            text/plain:
+              schema:
+                type: string
+                example: "Internal Server Error"
   /todos/{todoId}:
     get:
       tags:
@@ -226,6 +331,12 @@ components:
           description: Timestamp of when the todo item was created.
           readOnly: true
           example: "2025-05-09T18:12:54Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the todo item was last updated.
+          readOnly: true
+          example: "2025-05-10T10:00:00Z"
 
     NewTodo:
       type: object
@@ -361,7 +472,3 @@ components:
 
 security:
   - ApiKeyAuth: [] # Applies ApiKeyAuth globally to all operations
-  # You can also apply security on a per-operation basis if needed:
-  # /some/public/path:
-  #   get:
-  #     security: [] # No security for this specific operation
