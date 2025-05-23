@@ -6,7 +6,7 @@ import (
 	"go/format"
 	"text/template"
 
-	"github.com/lyeslabs/mcpgen/internal/converter"
+	"github.com/lyeskara/testmcp/internal/converter"
 )
 
 // GenerateServerFile creates a server.go file in the same package as the tools

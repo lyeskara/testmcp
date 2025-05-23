@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lyeslabs/mcpgen/internal/generator"
+	"github.com/lyeskara/testmcp/internal/generator"
 )
 
 func main() {

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/lyeslabs/mcpgen/internal/converter"
+	"github.com/lyeskara/testmcp/internal/converter"
 )
 
 // GenerateToolFiles generates individual tool files while preserving existing handler implementations

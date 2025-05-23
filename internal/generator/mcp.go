@@ -4,7 +4,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/lyeslabs/mcpgen/internal/converter"
+	"github.com/lyeskara/testmcp/internal/converter"
 )
 
 //go:embed templates/*.templ

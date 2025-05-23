@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lyeslabs/mcpgen/internal/converter"
+	"github.com/lyeskara/testmcp/internal/converter"
 )
 
 // testConverter implements a minimal converter.Converter interface for testing.

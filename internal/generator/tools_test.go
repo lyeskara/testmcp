@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lyeslabs/mcpgen/internal/converter"
+	"github.com/lyeskara/testmcp/internal/converter"
 )
 
 func Test_capitalizeFirstLetter(t *testing.T) {

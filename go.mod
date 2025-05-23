@@ -1,5 +1,4 @@
-module github.com/lyeslabs/mcpgen
-
+module github.com/lyeskara/testmcp
 go 1.23.4
 
 require (
