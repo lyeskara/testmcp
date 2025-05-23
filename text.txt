@@ -1,0 +1,28 @@
+I'm sure most of you have heard of the MCP protocol and have seen the big hype around it over the past few months.
+
+I read the MCP docs and spent a lot of time digging into their GitHub to really understand its value and why @AnthropicAI invented a new protocol instead of relying on existing, reliable standards like REST.
+
+The short answer to the question of MCP’s value is: stringification of request parameters and response results.
+
+AI agents are LLM calls inside a while loop with a state machine.
+
+LLMs cannot do anything besides return text to a text input. In one way, you can treat LLMs as a pure function that takes a string as input and returns a random string as output.
+
+This means an LLM can only provide information on what to do; it cannot actually do anything. If you tell it to scrape a website, it will just provide the steps for scraping. It will not do the actual scraping.
+
+An AI agent that can interact with the file system or make network requests will need tools for this.
+There is a problem, though. There is a huge number of use cases for what we want agents to do, which means there are also a huge number of tools to develop for LLMs to use.
+
+If we call services by their APIs and let this be an ad hoc approach, where each thing has its own interface and the LLM needs to undeterministically figure out during runtime how to connect, this will result in slow, expensive, and insecure agents.
+
+We need a standard protocol that defines how an AI agent tool must be. We need an interface that can be standardized and helpful by providing data access patterns that suit LLMs best.
+
+This is what MCP is.
+
+MCP standardizes how LLMs access tools. It specifies that a tool must have a schema describing what the input shape is and specifies that the output must be a string, not an object, array, or binary. If it’s binary, make it a base64 string.
+
+By requiring all tool inputs and outputs to be strings, MCP ensures LLMs can reliably interact with any tool, no matter how complex, using just text. 
+
+This standardization makes tool integration simpler, safer, and more predictable for both developers and AI agents.
+
+In short, MCP isn’t just another API spec. It is a protocol built specifically for LLMs, making agent-tool interactions seamless and robust. If you’re building with LLMs, understanding MCP is quickly becoming essential.

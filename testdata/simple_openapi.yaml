@@ -1,11 +1,21 @@
 openapi: 3.0.0
 info:
-  title: My Valid API From File
-  version: "1.0.0"
+  title: Test API
+  version: "1.0"
 paths:
-  /example:
+  /hello:
     get:
-      summary: An example endpoint
+      summary: Hello
+      operationId: helloOp
       responses:
-        "200":
-          description: A successful response
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+servers:
+  - url: http://localhost
