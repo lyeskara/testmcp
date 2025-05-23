@@ -13,7 +13,7 @@ func main() {
 
 	// Define command-line flags
 	inputFile := flag.String("input", "", "Path to the OpenAPI specification file (JSON or YAML)")
-	outputDir := flag.String("output", "", "Path to the output MCP configuration file (YAML)")
+	outputDir := flag.String("output", "", "Path to the output MCP server directory")
 
 	validation := flag.Bool("validation", false, "Enable OpenAPI validation")
 	packageName := flag.String("package", "mcpgen", "Generated package name")
